@@ -4,7 +4,10 @@ import 'package:mfm/src/internal/utils.dart';
 import 'package:mfm/src/node.dart';
 
 class MfmParser {
-  static List<MfmNode> parse(String input, {int? nestLimit}) {
+  const MfmParser();
+
+
+  List<MfmNode> parse(String input, {int? nestLimit}) {
     final result = Language().fullParser.handler(
         input,
         0,

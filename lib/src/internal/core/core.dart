@@ -67,6 +67,9 @@ class Parser<T> {
     return Parser(handler: (input, index, state) {
       final result = handler(input, index, state);
       if (!result.success) {
+        if(result is! Result<String>) {
+          return failure();
+        }
         return result as Result<String>;
       }
       final succeed = result as Success<List>;

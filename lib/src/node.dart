@@ -1,5 +1,3 @@
-
-
 import 'package:collection/collection.dart';
 
 abstract class MfmNode {
@@ -27,6 +25,11 @@ abstract class MfmNode {
 
   @override
   int get hashCode => Object.hash(type, props, children);
+
+  @override
+  String toString() {
+    return "$type (props: ${(props?.entries.toString().replaceAll("\n", "\\n") ?? "")}, children: ${(children ?? "")})";
+  }
 }
 
 abstract class MfmSimpleNode extends MfmNode {
@@ -58,7 +61,10 @@ class MfmCodeBlock extends MfmBlock {
 }
 
 class MfmCenter extends MfmBlock {
-  MfmCenter(List<MfmInline> chilren) : super(type: "center", children: chilren);
+  MfmCenter({super.children})
+      : super(
+          type: "center",
+        );
 }
 
 class MfmEmojiCode extends MfmInline {
@@ -117,4 +123,31 @@ class MfmMention extends MfmInline {
       : super(
             type: "mention",
             props: {"username": username, "host": host, "acct": acct});
+}
+
+class MfmHashTag extends MfmInline {
+  final String hashTag;
+  MfmHashTag(this.hashTag)
+      : super(type: "hashtag", props: {"hashtag": hashTag});
+}
+
+class MfmLink extends MfmInline {
+  final String url;
+  final bool silent;
+
+  MfmLink({required this.silent, required this.url, super.children})
+      : super(
+          type: "link",
+          props: {"silent": silent, "url": url},
+        );
+}
+
+class MfmURL extends MfmInline {
+  final String value;
+  final bool? brackets;
+
+  MfmURL(this.value, this.brackets) : super(type: "url", props:  {
+    "url": value,
+    "brackets": brackets,
+  });
 }

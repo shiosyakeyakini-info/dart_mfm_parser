@@ -4,7 +4,7 @@ import 'package:mfm/src/internal/utils.dart';
 import 'package:mfm/src/node.dart';
 
 final space = regexp(RegExp(r"[\u0020\u3000\t]"));
-final alphaAndNum = regexp(RegExp(r"[a-z0-9]"));
+final alphaAndNum = regexp(RegExp(r"[a-zA-Z0-9]"));
 final newLine = alt([crlf, cr, lf]);
 
 Parser seqOrText(List<Parser> parsers) {
@@ -71,6 +71,10 @@ class Language {
   Parser get inlineCode => _l["inlineCode"];
   Parser get mention => _l["mention"];
   Parser get fn => _l["fn"];
+  Parser get hashTag => _l["hashtag"];
+  Parser get link => _l["link"];
+  Parser get url => _l["url"];
+  Parser get urlAlt => _l["urlAlt"];
 
   Language() {
     _l = createLanguage({
@@ -96,10 +100,10 @@ class Language {
             strikeWave,
             fn,
             mention,
-            //hashtag,
+            hashTag,
             emojiCode,
-            //link,
-            //url,
+            link,
+            url,
             //search,
             text,
           ]),
@@ -110,7 +114,7 @@ class Language {
             boldTag,
             italicTag,
             strikeTag,
-            //urlAlt,
+            urlAlt,
             big,
             boldAsta,
             italicAsta,
@@ -121,10 +125,10 @@ class Language {
             strikeWave,
             fn,
             mention,
-            //hashtag,
+            hashTag,
             emojiCode,
-            //link,
-            //url,
+            link,
+            url,
             text,
           ]),
       "quote": () {
@@ -211,7 +215,7 @@ class Language {
           lineEnd,
           newLine.option()
         ]).map((result) {
-          return MfmCenter(mergeText(result[4]).cast<MfmInline>());
+          return MfmCenter(children: mergeText(result[4]).cast<MfmInline>());
         });
       },
       "big": () {
@@ -222,7 +226,7 @@ class Language {
           mark,
         ]).map((result) {
           if (result is String) return result;
-          return MfmFn(name: "tda", args: {}, children: mergeText(result[1]));
+          return MfmFn(name: "tada", args: {}, children: mergeText(result[1]));
         });
       },
       "text": () => char,
@@ -454,10 +458,10 @@ class Language {
         final parser = seq([
           notLinkLabel,
           str("@"),
-          regexp(RegExp(r"[a-z0-9_-]+")),
+          regexp(RegExp(r"[a-zA-z0-9_-]+")),
           seq([
             str("@"),
-            regexp(RegExp(r"[a-z0-9_.-]+")),
+            regexp(RegExp(r"[a-zA-z0-9_.-]+")),
           ], select: 1)
               .option(),
         ]);
@@ -467,7 +471,7 @@ class Language {
           if (!result.success) return failure();
 
           final beforeStr = input.slice(0, index);
-          if (RegExp(r"[a-z0-9]$").hasMatch(beforeStr)) return failure();
+          if (RegExp(r"[a-zA-z0-9]$").hasMatch(beforeStr)) return failure();
 
           var invalidMention = false;
           final resultIndex = result.index!;
@@ -514,6 +518,147 @@ class Language {
               : "@$modifiedName";
           return success(index + acct.length,
               MfmMention(modifiedName, modifiedHost, acct));
+        });
+      },
+      "hashtag": () {
+        final mark = str("#");
+        final Parser hashTagChar = seq([
+          notMatch(alt([
+            regexp(RegExp(r"""[ \u3000\t.,!?'"#:/[\]【】()「」（）<>]""")),
+            space,
+            newLine
+          ])),
+          char,
+        ], select: 1);
+        Parser? innerItem;
+        innerItem = lazy(() => alt([
+              seq([
+                str('('),
+                nest(innerItem!, fallback: hashTagChar).many(0),
+                str(')'),
+              ]),
+              seq([
+                str('['),
+                nest(innerItem, fallback: hashTagChar).many(0),
+                str(']'),
+              ]),
+              seq([
+                str('「'),
+                nest(innerItem, fallback: hashTagChar).many(0),
+                str('」'),
+              ]),
+              seq([
+                str('（'),
+                nest(innerItem, fallback: hashTagChar).many(0),
+                str('）'),
+              ]),
+              hashTagChar,
+            ]));
+        final parser = seq([
+          notLinkLabel,
+          mark,
+          innerItem.many(1).text(),
+        ], select: 2);
+        return Parser(handler: (input, index, state) {
+          final result = parser.handler(input, index, state);
+          if (!result.success) {
+            return failure();
+          }
+          // check before
+          final beforeStr = input.slice(0, index);
+          if (RegExp(r"[a-z0-9]$").hasMatch(beforeStr)) {
+            return failure();
+          }
+          final resultIndex = result.index!;
+          final resultValue = result.value;
+          // disallow number only
+          if (RegExp(r"^[0-9]+$").hasMatch(resultValue)) {
+            return failure();
+          }
+          return success(resultIndex, MfmHashTag(resultValue));
+        });
+      },
+      "link": () {
+        final labelInline = Parser(handler: (input, index, state) {
+          state.linkLabel = true;
+          final result = inline.handler(input, index, state);
+          state.linkLabel = false;
+          return result;
+        });
+        final closeLabel = str(']');
+        return seq([
+          notLinkLabel,
+          alt([str('?['), str('[')]),
+          seq([
+            notMatch(alt([closeLabel, newLine])),
+            nest(labelInline),
+          ], select: 1).many(1),
+          closeLabel,
+          str('('),
+          alt([urlAlt, url]),
+          str(')'),
+        ]).map((result) {
+          final silent = (result[1] == '?[');
+          final label = result[2];
+          final url = result[5] as MfmURL;
+          return MfmLink(silent: silent, url: url.value, children: mergeText(label));
+        });
+      },
+      "url": () {
+        final urlChar = regexp(RegExp(r"""[.,a-zA-Z0-9_/:%#@$&?!~=+-]"""));
+        Parser? innerItem;
+        innerItem = lazy(() => alt([
+          seq([
+            str('('), nest(innerItem!, fallback: urlChar).many(0), str(')'),
+          ]),
+          seq([
+            str('['), nest(innerItem, fallback: urlChar).many(0), str(']'),
+          ]),
+          urlChar,
+        ]));
+        final parser = seq([
+          notLinkLabel,
+          regexp(RegExp(r"https?:\/\/")),
+          innerItem.many(1).text(),
+        ]);
+        return Parser(handler: (input, index, state) {
+          Result result = parser.handler(input, index, state);
+          if (!result.success) {
+            return failure();
+          }
+          final resultIndex = result.index;
+          var modifiedIndex = resultIndex!;
+          final schema = result.value[1] as String;
+          var content = result.value[2] as String;
+          // remove the ".," at the right end
+          var regexpResult = RegExp(r"[.,]+$").firstMatch(content);
+          if (regexpResult != null) {
+            modifiedIndex -= regexpResult.group(0)!.length;
+            content = content.slice(0, (-1 * regexpResult.group(0)!.length));
+            if (content.isEmpty) {
+              return success(resultIndex, input.slice(index, resultIndex));
+            }
+          }
+          return success(modifiedIndex, MfmURL(schema + content, false));
+        });
+      },
+      "urlAlt": () {
+        final open = str('<');
+      final close = str('>');
+        final parser = seq([
+          notLinkLabel,
+          open,
+          regexp(RegExp(r"https?:\/\/")),
+          seq([notMatch(alt([close, space])), char], select: 1).many(1),
+          close,
+        ]).text();
+        return Parser(handler:(input, index, state) {
+          final result = parser.handler(input, index, state);
+          if (!result.success) {
+            return failure();
+          }
+          final text = result.value!.slice(1, (result.value!.length - 1));
+          return success(result.index!, MfmURL(text, true));
         });
       }
     });

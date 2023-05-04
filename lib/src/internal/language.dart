@@ -299,11 +299,11 @@ class Language {
             return failure();
           }
           final beforeStr = input.slice(0, index);
-          if (RegExp(r"[a-z0-9]$").hasMatch(beforeStr)) {
+          if (RegExp(r"[a-zA-Z0-9]$").hasMatch(beforeStr)) {
             return failure();
           }
-          return success(
-              index, MfmItalic(mergeText(result.value[1]).cast<MfmInline>()));
+          return success(result.index!,
+              MfmItalic(mergeText(result.value[1]).cast<MfmInline>()));
         });
       },
       "italicUnder": () {
@@ -323,8 +323,8 @@ class Language {
           if (RegExp(r"[a-z0-9]$").hasMatch(beforeStr)) {
             return failure();
           }
-          return success(
-              index, MfmItalic(mergeText(result.value[1]).cast<MfmInline>()));
+          return success(result.index!,
+              MfmItalic(mergeText(result.value[1]).cast<MfmInline>()));
         });
       },
       "strikeTag": () {
@@ -405,7 +405,7 @@ class Language {
         ]).map((result) {
           return {
             "k": result[0],
-            "v": (result[1] != null) ? result[1] : true,
+            "v": (result[1] != null) ? result[1] : "",
           };
         });
 
@@ -592,7 +592,8 @@ class Language {
           seq([
             notMatch(alt([closeLabel, newLine])),
             nest(labelInline),
-          ], select: 1).many(1),
+          ], select: 1)
+              .many(1),
           closeLabel,
           str('('),
           alt([urlAlt, url]),
@@ -601,21 +602,26 @@ class Language {
           final silent = (result[1] == '?[');
           final label = result[2];
           final url = result[5] as MfmURL;
-          return MfmLink(silent: silent, url: url.value, children: mergeText(label));
+          return MfmLink(
+              silent: silent, url: url.value, children: mergeText(label));
         });
       },
       "url": () {
         final urlChar = regexp(RegExp(r"""[.,a-zA-Z0-9_/:%#@$&?!~=+-]"""));
         Parser? innerItem;
         innerItem = lazy(() => alt([
-          seq([
-            str('('), nest(innerItem!, fallback: urlChar).many(0), str(')'),
-          ]),
-          seq([
-            str('['), nest(innerItem, fallback: urlChar).many(0), str(']'),
-          ]),
-          urlChar,
-        ]));
+              seq([
+                str('('),
+                nest(innerItem!, fallback: urlChar).many(0),
+                str(')'),
+              ]),
+              seq([
+                str('['),
+                nest(innerItem, fallback: urlChar).many(0),
+                str(']'),
+              ]),
+              urlChar,
+            ]));
         final parser = seq([
           notLinkLabel,
           regexp(RegExp(r"https?:\/\/")),
@@ -644,15 +650,19 @@ class Language {
       },
       "urlAlt": () {
         final open = str('<');
-      final close = str('>');
+        final close = str('>');
         final parser = seq([
           notLinkLabel,
           open,
           regexp(RegExp(r"https?:\/\/")),
-          seq([notMatch(alt([close, space])), char], select: 1).many(1),
+          seq([
+            notMatch(alt([close, space])),
+            char
+          ], select: 1)
+              .many(1),
           close,
         ]).text();
-        return Parser(handler:(input, index, state) {
+        return Parser(handler: (input, index, state) {
           final result = parser.handler(input, index, state);
           if (!result.success) {
             return failure();

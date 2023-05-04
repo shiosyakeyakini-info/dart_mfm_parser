@@ -12,8 +12,7 @@ $[x2 1. Feature]
 - custom emoji, such as custom emoji
 
   """;
-  final List<MfmNode> parsedText = MfmParser.parse(input);
+  final List<MfmNode> parsedText = MfmParser().parse(input);
 
   print(parsedText);
-  
 }

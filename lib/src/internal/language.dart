@@ -388,7 +388,7 @@ class Language {
       "fn": () {
         final fnName = Parser(handler: (input, index, state) {
           final result =
-              regexp(RegExp("[a-z0-9_]+")).handler(input, index, state);
+              regexp(RegExp("[a-zA-Z0-9_]+")).handler(input, index, state);
           if (!result.success) {
             return result;
           }
@@ -396,10 +396,10 @@ class Language {
         });
 
         final Parser<Map<String, dynamic>> arg = seq([
-          regexp(RegExp("[a-z0-9_]+")),
+          regexp(RegExp("[a-zA-Z0-9_]+")),
           seq([
             str("="),
-            regexp(RegExp("[a-z0-9_.-]+")),
+            regexp(RegExp("[a-zA-Z0-9_.-]+")),
           ], select: 1)
               .option(),
         ]).map((result) {

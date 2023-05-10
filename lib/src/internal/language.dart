@@ -51,6 +51,7 @@ Parser nest(Parser parser, {Parser? fallback}) {
 class Language {
   late final Map<String, dynamic> _l;
   Parser get fullParser => _l["full"].many(0);
+  Parser get simpleParser => _l["simple"].many(0);
   Parser get quote => _l["quote"];
   Parser get big => _l["big"];
   Parser get boldAsta => _l["boldAsta"];
@@ -106,6 +107,11 @@ class Language {
             url,
             //search,
             text,
+          ]),
+      "simple": () => alt([
+            //unicodeEmoji,
+            emojiCode,
+            text
           ]),
       "inline": () => alt([
             //unicodeEmoji,

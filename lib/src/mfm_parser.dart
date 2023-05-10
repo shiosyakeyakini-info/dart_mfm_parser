@@ -6,7 +6,6 @@ import 'package:mfm/src/node.dart';
 class MfmParser {
   const MfmParser();
 
-
   List<MfmNode> parse(String input, {int? nestLimit}) {
     final result = Language().fullParser.handler(
         input,
@@ -17,6 +16,20 @@ class MfmParser {
             linkLabel: false,
             trace: false)) as Success;
 
+    final res = mergeText(result.value);
+    print(res);
+    return res;
+  }
+
+  List<MfmNode> parseSimple(String input) {
+    final result = Language().simpleParser.handler(
+        input,
+        0,
+        FullParserOpts(
+            nestLimit: 20,
+            depth: 0,
+            linkLabel: false,
+            trace: false)) as Success;
     return mergeText(result.value);
   }
 }

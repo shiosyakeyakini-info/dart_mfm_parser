@@ -2,17 +2,21 @@ import 'package:mfm_parser/mfm_parser.dart';
 
 void main() {
   final input = r"""
-
-<center>$[x3 **Hello, Markup language For Misskey.]</center>
+<center>$[x2 **Hello, Markup language For Misskey.**]</center>
 
 $[x2 1. Feature]
 
-- mention, such as @example @username@example.com
-- hashtag, such as #something
-- custom emoji, such as custom emoji
+1. mention, such as @example @username@example.com
+2. hashtag, such as #something
+3. custom emoji, such as custom emoji :something_emoji: and 🚀🚀🚀
 
   """;
-  final List<MfmNode> parsedText = MfmParser().parse(input);
+  final List<MfmNode> parsed = MfmParser().parse(input);
 
-  print(parsedText);
+  print(parsed);
+
+  final userName = "🎂:ai_yay: momoi :ai_yay_fast:🎂@C100 Z-999";
+  final List<MfmNode> parsedUserName = MfmParser().parseSimple(userName);
+
+  print(parsedUserName);
 }

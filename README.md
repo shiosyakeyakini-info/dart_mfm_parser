@@ -24,7 +24,7 @@ flutter pub add mfm_parser
 
 ## Usage
 
-you can use `MfmParser().parse()` or `MfmParser().simpleParse()`.
+you can use `MfmParser().parse()` or `MfmParser().parseSimple()`.
 simpleParser is only supported to the text and emoji. you can used it for such as user name.
 
 ```dart

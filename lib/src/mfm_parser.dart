@@ -3,9 +3,12 @@ import 'package:mfm_parser/src/internal/language.dart';
 import 'package:mfm_parser/src/internal/utils.dart';
 import 'package:mfm_parser/src/node.dart';
 
+/// MFM Parser class
 class MfmParser {
   const MfmParser();
 
+  /// parse full syntax.
+  /// if you want to limit elements nest, input [nestLimit]
   List<MfmNode> parse(String input, {int? nestLimit}) {
     final result = Language().fullParser.handler(
         input,
@@ -20,6 +23,8 @@ class MfmParser {
     return res;
   }
 
+  /// parse limited syntax.
+  /// it will parse text or emoji.
   List<MfmNode> parseSimple(String input) {
     final result = Language().simpleParser.handler(
         input,

@@ -16,7 +16,7 @@ abstract class MfmNode {
     if (other is MfmNode) {
       return runtimeType == other.runtimeType &&
           type == other.type &&
-          const MapEquality().equals(props, other.props) &&
+          const DeepCollectionEquality().equals(props, other.props) &&
           const DeepCollectionEquality().equals(children, other.children);
     } else {
       return false;
@@ -65,6 +65,12 @@ class MfmCenter extends MfmBlock {
       : super(
           type: "center",
         );
+}
+
+class MfmUnicodeEmoji extends MfmInline {
+  final String emoji;
+  MfmUnicodeEmoji(this.emoji)
+      : super(type: "unicodeEmoji", props: {"emoji": emoji});
 }
 
 class MfmEmojiCode extends MfmInline {
@@ -146,8 +152,9 @@ class MfmURL extends MfmInline {
   final String value;
   final bool? brackets;
 
-  MfmURL(this.value, this.brackets) : super(type: "url", props:  {
-    "url": value,
-    "brackets": brackets,
-  });
+  MfmURL(this.value, this.brackets)
+      : super(type: "url", props: {
+          "url": value,
+          "brackets": brackets,
+        });
 }

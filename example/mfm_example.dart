@@ -1,4 +1,4 @@
-import 'package:mfm/mfm.dart';
+import 'package:mfm_parser/mfm.dart';
 
 void main() {
   final input = r"""

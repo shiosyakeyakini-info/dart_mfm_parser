@@ -1,7 +1,7 @@
-import 'package:mfm/src/internal/core/core.dart';
-import 'package:mfm/src/internal/language.dart';
-import 'package:mfm/src/internal/utils.dart';
-import 'package:mfm/src/node.dart';
+import 'package:mfm_parser/src/internal/core/core.dart';
+import 'package:mfm_parser/src/internal/language.dart';
+import 'package:mfm_parser/src/internal/utils.dart';
+import 'package:mfm_parser/src/node.dart';
 
 class MfmParser {
   const MfmParser();
@@ -17,7 +17,6 @@ class MfmParser {
             trace: false)) as Success;
 
     final res = mergeText(result.value);
-    print(res);
     return res;
   }
 

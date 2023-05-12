@@ -1,39 +1,47 @@
-<!-- 
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# mfm_parser
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/guides/libraries/writing-package-pages). 
+[MFM (Misskey Flavor Markdown)](https://misskey-hub.net/en/docs/features/mfm.html) parser implementation for dart.
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-library-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/developing-packages). 
--->
-
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+This package is not **renderer** of the mfm.
 
 ## Features
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+This package was ported from typescript project of
+[misskey-dev/mfm.js](https://github.com/misskey-dev/mfm.js/tree/develop) and
+depended on [twitter/twemoji-parser](https://github.com/twitter/twemoji-parser/blob/master/src/lib/regex.js) too.
 
 ## Getting started
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+```
+dart pub add mfm_parser
+```
+
+if you use flutter,
+
+```
+flutter pub add mfm_parser
+```
 
 ## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder. 
+you can use `MfmParser().parse()` or `MfmParser().simpleParse()`.
+simpleParser is only supported to the text and emoji. you can used it for such as user name.
 
 ```dart
-const like = 'sample';
+final text = r"""
+<center>$[x2 **What's @ai**]</center>
+@ai is official mascot character of the Misskey.
+you can see more information from <https://xn--931a.moe/>
+""";
+
+final list = const MfmParser().parse(text);
+
+print(list);
 ```
 
-## Additional information
+## TODO
 
-TODO: Tell users more about the package: where to find more information, how to 
-contribute to the package, how to file issues, what response they can expect 
-from the package authors, and more.
+These feature will be supported in the future.
+
+- This package is not compatible with 'toString()' and many api from the official mfm.js.
+- This package is not support math-inline and math-block.

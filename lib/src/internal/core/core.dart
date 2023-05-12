@@ -1,5 +1,5 @@
-import 'package:mfm/src/internal/extension/string_extension.dart';
-import 'package:mfm/src/mfm_parser.dart';
+import 'package:mfm_parser/src/internal/extension/string_extension.dart';
+import 'package:mfm_parser/src/mfm_parser.dart';
 
 class Success<T> extends Result<T> {
   const Success(
@@ -23,10 +23,10 @@ typedef ParserHandler<T> = Result<T> Function(
 
 Success<T> success<T>(int index, T value) =>
     Success<T>(value: value, index: index);
-Failure<T> failure<T>() =>  Failure<T>();
+Failure<T> failure<T>() => Failure<T>();
 
 class Parser<T> {
-   String? name;
+  String? name;
   late ParserHandler<T> handler;
 
   Parser({required ParserHandler<T> handler, this.name}) {
@@ -52,8 +52,7 @@ class Parser<T> {
     return Parser<U>(handler: (input, index, state) {
       final result = handler(input, index, state);
       if (!result.success) {
-
-        if(result is! Failure<U>) {
+        if (result is! Failure<U>) {
           return failure<U>();
         }
 
@@ -67,12 +66,12 @@ class Parser<T> {
     return Parser(handler: (input, index, state) {
       final result = handler(input, index, state);
       if (!result.success) {
-        if(result is! Result<String>) {
+        if (result is! Result<String>) {
           return failure();
         }
         return result as Result<String>;
       }
-      final succeed = result as Success<List>;
+      final succeed = result as Success;
       final text = input.substring(index, result.index);
       return success(succeed.index!, text);
     });
@@ -83,23 +82,23 @@ class Parser<T> {
       var result;
       var latestIndex = index;
       final List<T> accum = [];
-      while(latestIndex < input.length) {
+      while (latestIndex < input.length) {
         result = handler(input, latestIndex, state);
-        if(!result.success) {
+        if (!result.success) {
           break;
         }
         latestIndex = result.index;
         accum.add(result.value);
       }
-      if(accum.length < min) {
+      if (accum.length < min) {
         return failure<List<T>>();
       }
-      return success(latestIndex, accum);      
+      return success(latestIndex, accum);
     });
   }
 
   Parser<List<T>> sep(Parser<dynamic> separator, int min) {
-    if(min < 1) {
+    if (min < 1) {
       throw Exception('"min" must be a value greater than or equal to 1.');
     }
 
@@ -108,12 +107,9 @@ class Parser<T> {
       seq([
         separator,
         this,
-      ], select: 1).many(min - 1),
-    ]).map((result) => <T>[
-      result[0], 
-      for(final elem in result[1])
-        elem
-    ]);
+      ], select: 1)
+          .many(min - 1),
+    ]).map((result) => <T>[result[0], for (final elem in result[1]) elem]);
   }
 
   Parser option<T>() {
@@ -126,10 +122,10 @@ class Parser<T> {
 
 Parser<T> str<T extends String>(T value) {
   return Parser(handler: (input, index, _) {
-    if((input.length - index) < value.length) {
+    if ((input.length - index) < value.length) {
       return failure<T>();
     }
-    if(input.substr(index, value.length) != value) {
+    if (input.substr(index, value.length) != value) {
       return failure();
     }
 
@@ -144,7 +140,7 @@ Parser<String> regexp<T extends RegExp>(T pattern) {
     final text = input.substring(index);
     final result = re.firstMatch(text);
 
-    if(result == null) {
+    if (result == null) {
       return failure();
     }
     return success(index + result.group(0)!.length, result.group(0)!);
@@ -157,9 +153,9 @@ Parser seq(List<Parser> parsers, {int? select}) {
     var latestIndex = index;
     final accum = [];
 
-    for(var i=0; i<parsers.length; i++) {
+    for (var i = 0; i < parsers.length; i++) {
       result = parsers[i].handler(input, latestIndex, state);
-      if(!result.success) {
+      if (!result.success) {
         return result;
       }
       latestIndex = result.index;
@@ -172,9 +168,9 @@ Parser seq(List<Parser> parsers, {int? select}) {
 Parser alt(List<Parser> parsers) {
   return Parser(handler: (input, index, state) {
     var result;
-    for(var i=0;i<parsers.length;i++) {
+    for (var i = 0; i < parsers.length; i++) {
       result = parsers[i].handler(input, index, state);
-      if(result.success) {
+      if (result.success) {
         return result;
       }
     }
@@ -200,7 +196,7 @@ final Parser lf = str("\n");
 final Parser crlf = str("\r\n");
 final Parser newline = alt([crlf, cr, lf]);
 final Parser char = Parser(handler: (input, index, _) {
-  if((input.length - index) < 1) {
+  if ((input.length - index) < 1) {
     return failure();
   }
   final value = input[index];
@@ -208,26 +204,26 @@ final Parser char = Parser(handler: (input, index, _) {
 });
 
 final Parser lineBegin = Parser(handler: (input, index, state) {
-  if(index == 0) {
+  if (index == 0) {
     return success(index, null);
   }
-  if(cr.handler(input, index - 1, state).success) {
+  if (cr.handler(input, index - 1, state).success) {
     return success(index, null);
   }
-  if(lf.handler(input, index - 1, state ).success) {
+  if (lf.handler(input, index - 1, state).success) {
     return success(index, null);
   }
   return failure();
 });
 
 Parser lineEnd = Parser(handler: (input, index, state) {
-  if(index == input.length) {
+  if (index == input.length) {
     return success(index, null);
   }
-  if(cr.handler(input, index, state).success) {
+  if (cr.handler(input, index, state).success) {
     return success(index, null);
   }
-  if(lf.handler(input, index, state).success) {
+  if (lf.handler(input, index, state).success) {
     return success(index, null);
   }
   return failure();
@@ -245,10 +241,10 @@ Parser lazy<T>(Parser<T> Function() fn) {
 Map<String, Parser> createLanguage<T>(Map<String, Parser Function()> syntaxes) {
   final Map<String, Parser> rules = {};
 
-  for(final entry in syntaxes.entries) {
+  for (final entry in syntaxes.entries) {
     rules[entry.key] = lazy(() {
       final parser = syntaxes[entry.key]!();
-      if(parser == null) {
+      if (parser == null) {
         throw Exception("syntax must return ar parser");
       }
       parser.name = entry.key;

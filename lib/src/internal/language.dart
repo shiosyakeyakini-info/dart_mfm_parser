@@ -1,7 +1,8 @@
-import 'package:mfm/src/internal/extension/string_extension.dart';
-import 'package:mfm/src/internal/core/core.dart';
-import 'package:mfm/src/internal/utils.dart';
-import 'package:mfm/src/node.dart';
+import 'package:mfm_parser/src/internal/extension/string_extension.dart';
+import 'package:mfm_parser/src/internal/core/core.dart';
+import 'package:mfm_parser/src/internal/tweemoji_parser.dart';
+import 'package:mfm_parser/src/internal/utils.dart';
+import 'package:mfm_parser/src/node.dart';
 
 final space = regexp(RegExp(r"[\u0020\u3000\t]"));
 final alphaAndNum = regexp(RegExp(r"[a-zA-Z0-9]"));
@@ -76,18 +77,20 @@ class Language {
   Parser get link => _l["link"];
   Parser get url => _l["url"];
   Parser get urlAlt => _l["urlAlt"];
+  Parser get unicodeEmoji => _l["unicodeEmoji"];
+  Parser get search => _l["search"];
 
   Language() {
     _l = createLanguage({
       "full": () => alt([
-            //unicodeEmoji,
+            unicodeEmoji,
             centerTag,
             smallTag,
             plainTag,
             boldTag,
             italicTag,
             strikeTag,
-            //urlAlt,
+            urlAlt,
             big,
             boldAsta,
             italicAsta,
@@ -105,16 +108,12 @@ class Language {
             emojiCode,
             link,
             url,
-            //search,
+            search,
             text,
           ]),
-      "simple": () => alt([
-            //unicodeEmoji,
-            emojiCode,
-            text
-          ]),
+      "simple": () => alt([unicodeEmoji, emojiCode, text]),
       "inline": () => alt([
-            //unicodeEmoji,
+            unicodeEmoji,
             smallTag,
             plainTag,
             boldTag,
@@ -326,7 +325,7 @@ class Language {
             return failure();
           }
           final beforeStr = input.slice(0, index);
-          if (RegExp(r"[a-z0-9]$").hasMatch(beforeStr)) {
+          if (RegExp(r"[a-zA-Z0-9]$").hasMatch(beforeStr)) {
             return failure();
           }
           return success(result.index!,
@@ -361,13 +360,17 @@ class Language {
           return MfmStrike(mergeText(result[1]).cast<MfmInline>());
         });
       },
+      "unicodeEmoji": () {
+        return regexp(tweEmojiParser)
+            .map((content) => MfmUnicodeEmoji(content));
+      },
       "emojiCode": () {
-        final side = notMatch(regexp(RegExp(r"[a-z0-9]")));
+        final side = notMatch(regexp(RegExp(r"[a-zA-Z0-9]")));
         final mark = str(":");
         return seq([
           alt([lineBegin, side]),
           mark,
-          regexp(RegExp(r"[a-z0-9_+-]+")),
+          regexp(RegExp(r"[a-zA-Z0-9_+-]+")),
           mark,
           alt([lineEnd, side])
         ], select: 2)
@@ -453,7 +456,7 @@ class Language {
         return seq([
           mark,
           seq([
-            notMatch(alt([mark, str("`"), newLine])),
+            notMatch(alt([mark, str("´"), newLine])),
             char,
           ], select: 1)
               .many(1),
@@ -464,10 +467,10 @@ class Language {
         final parser = seq([
           notLinkLabel,
           str("@"),
-          regexp(RegExp(r"[a-zA-z0-9_-]+")),
+          regexp(RegExp(r"[a-zA-Z0-9_-]+")),
           seq([
             str("@"),
-            regexp(RegExp(r"[a-zA-z0-9_.-]+")),
+            regexp(RegExp(r"[a-zA-Z0-9_.-]+")),
           ], select: 1)
               .option(),
         ]);
@@ -477,7 +480,7 @@ class Language {
           if (!result.success) return failure();
 
           final beforeStr = input.slice(0, index);
-          if (RegExp(r"[a-zA-z0-9]$").hasMatch(beforeStr)) return failure();
+          if (RegExp(r"[a-zA-Z0-9]$").hasMatch(beforeStr)) return failure();
 
           var invalidMention = false;
           final resultIndex = result.index!;
@@ -572,7 +575,7 @@ class Language {
           }
           // check before
           final beforeStr = input.slice(0, index);
-          if (RegExp(r"[a-z0-9]$").hasMatch(beforeStr)) {
+          if (RegExp(r"[a-zA-Z0-9]$").hasMatch(beforeStr)) {
             return failure();
           }
           final resultIndex = result.index!;
@@ -675,6 +678,32 @@ class Language {
           }
           final text = result.value!.slice(1, (result.value!.length - 1));
           return success(result.index!, MfmURL(text, true));
+        });
+      },
+      "search": () {
+        final button = alt([
+          regexp(RegExp(r"\[(検索|[sS][eE][aA][rR][cC][hH])\]")),
+          regexp(RegExp(r"(検索|[sS][eE][aA][rR][cC][hH])"))
+        ]);
+
+        return seq([
+          newLine.option(),
+          lineBegin,
+          seq([
+            notMatch(alt([
+              newLine,
+              seq([space, button, lineEnd])
+            ])),
+            char
+          ], select: 1)
+              .many(1),
+          space,
+          button,
+          lineEnd,
+          newLine.option(),
+        ]).map((result) {
+          final query = result[2].join('');
+          return MfmSearch(query, "$query${result[3]}${result[4]}");
         });
       }
     });

@@ -1,3 +1,7 @@
+## 1.0.2
+
+- add documentation code, support docs.
+
 ## 1.0.1
 
 - update pubspec.yaml

@@ -1,5 +1,6 @@
 name: mfm_parser
-description: mfm (Markup Language For Misskey) parser for dart.
+description: mfm (Markup Language For Misskey) parser for dart. it provides feature that text convert
+              misskey node and properties.
 version: 1.0.1
 homepage: https://github.com/shiosyakeyakini-info/dart_mfm_parser
 
@@ -10,7 +11,7 @@ dev_dependencies:
   lints: ^2.0.0
   test: ^1.16.0
 dependencies:
-  collection: ^1.17.1
+  collection: ^1.16.0
 
 platforms:
   android:

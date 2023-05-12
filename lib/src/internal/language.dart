@@ -163,7 +163,7 @@ class Language {
           final quoteIndex = result.index!;
 
           if (contents.length == 1 && contents[0].length == 0) {
-            failure();
+            return failure();
           }
 
           final contentParser = nest(fullParser).many(0);
@@ -633,7 +633,7 @@ class Language {
             ]));
         final parser = seq([
           notLinkLabel,
-          regexp(RegExp(r"https?:\/\/")),
+          regexp(RegExp(r"https?://")),
           innerItem.many(1).text(),
         ]);
         return Parser(handler: (input, index, state) {
@@ -663,7 +663,7 @@ class Language {
         final parser = seq([
           notLinkLabel,
           open,
-          regexp(RegExp(r"https?:\/\/")),
+          regexp(RegExp(r"https?://")),
           seq([
             notMatch(alt([close, space])),
             char

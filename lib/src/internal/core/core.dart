@@ -58,7 +58,7 @@ class Parser<T> {
 
         return result as Result<U>;
       }
-      return success(result.index!, fn(result.value!));
+      return success(result.index!, fn(result.value as T));
     });
   }
 
@@ -77,21 +77,21 @@ class Parser<T> {
     });
   }
 
-  Parser<List<T>> many<T>(int min) {
+  Parser<List<T2>> many<T2>(int min) {
     return Parser(handler: (input, index, state) {
-      var result;
+      Result result;
       var latestIndex = index;
-      final List<T> accum = [];
+      final List<T2> accum = [];
       while (latestIndex < input.length) {
         result = handler(input, latestIndex, state);
         if (!result.success) {
           break;
         }
-        latestIndex = result.index;
+        latestIndex = result.index!;
         accum.add(result.value);
       }
       if (accum.length < min) {
-        return failure<List<T>>();
+        return failure<List<T2>>();
       }
       return success(latestIndex, accum);
     });
@@ -112,7 +112,7 @@ class Parser<T> {
     ]).map((result) => <T>[result[0], for (final elem in result[1]) elem]);
   }
 
-  Parser option<T>() {
+  Parser option<T2>() {
     return alt([
       this,
       succeeded(null),
@@ -149,7 +149,7 @@ Parser<String> regexp<T extends RegExp>(T pattern) {
 
 Parser seq(List<Parser> parsers, {int? select}) {
   return Parser(handler: (input, index, state) {
-    var result;
+    Result result;
     var latestIndex = index;
     final accum = [];
 
@@ -158,7 +158,7 @@ Parser seq(List<Parser> parsers, {int? select}) {
       if (!result.success) {
         return result;
       }
-      latestIndex = result.index;
+      latestIndex = result.index!;
       accum.add(result.value);
     }
     return success(latestIndex, (select != null ? accum[select] : accum));
@@ -167,7 +167,7 @@ Parser seq(List<Parser> parsers, {int? select}) {
 
 Parser alt(List<Parser> parsers) {
   return Parser(handler: (input, index, state) {
-    var result;
+    Result result;
     for (var i = 0; i < parsers.length; i++) {
       result = parsers[i].handler(input, index, state);
       if (result.success) {
@@ -244,9 +244,6 @@ Map<String, Parser> createLanguage<T>(Map<String, Parser Function()> syntaxes) {
   for (final entry in syntaxes.entries) {
     rules[entry.key] = lazy(() {
       final parser = syntaxes[entry.key]!();
-      if (parser == null) {
-        throw Exception("syntax must return ar parser");
-      }
       parser.name = entry.key;
       return parser;
     });

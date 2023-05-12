@@ -1,14 +1,9 @@
-// ignore: depend_on_referenced_packages
-import 'dart:math';
-
-import 'package:collection/collection.dart';
 import 'package:mfm_parser/src/mfm_parser.dart';
 import 'package:mfm_parser/src/node.dart';
 import 'package:test/test.dart';
 
 void main() {
   final parse = MfmParser().parse;
-  final equals = const DeepCollectionEquality().equals;
 
   group("SimpleParser", () {
     group("text", () {
@@ -104,7 +99,6 @@ void main() {
             MfmCenter(children: [MfmText("a")])
           ]),
         ];
-        final result = parse(input);
         expect(parse(input), orderedEquals(output));
       });
 
@@ -117,7 +111,7 @@ void main() {
         final output = [
           MfmQuote(children: [
             MfmCenter(children: [
-              MfmText("I'm"),
+              MfmText("I'm "),
               MfmMention("ai", null, "@ai"),
               MfmText(", An bot of misskey!"),
             ])

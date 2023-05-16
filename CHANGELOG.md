@@ -1,3 +1,7 @@
+## 1.0.3
+
+- MfmSearch contains field
+
 ## 1.0.2
 
 - add documentation code, support docs.

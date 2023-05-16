@@ -58,7 +58,9 @@ class MfmQuote extends MfmBlock {
 /// Search Node
 /// [query] is search query
 class MfmSearch extends MfmBlock {
-  MfmSearch(String query, String content)
+  final String query;
+  final String content;
+  MfmSearch(this.query, this.content)
       : super(type: "search", props: {"query": query, "content": content});
 }
 

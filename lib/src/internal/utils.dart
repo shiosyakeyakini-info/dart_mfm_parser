@@ -24,7 +24,9 @@ List<MfmNode> mergeText(List nodes) {
           if (nodeElement is String) {
             str += nodeElement;
           } else if (nodeElement is MfmNode) {
-            // dest.add(MfmText(str));
+            if (str.isNotEmpty) {
+              dest.add(MfmText(str));
+            }
             str = "";
             dest.add(nodeElement);
           }

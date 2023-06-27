@@ -165,6 +165,19 @@ hoge""";
 
         expect(parse(input), orderedEquals(output));
       });
+
+      test("引用中にハッシュタグがある場合", () {
+        final input = "> before #abc after";
+        final output = [
+          MfmQuote(children: [
+            MfmText("before "),
+            MfmHashTag("abc"),
+            MfmText(" after"),
+          ])
+        ];
+
+        expect(parse(input), orderedEquals(output));
+      });
     });
 
     group("search", () {

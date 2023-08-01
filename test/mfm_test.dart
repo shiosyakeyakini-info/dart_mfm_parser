@@ -270,7 +270,31 @@ hoge""";
       });
     });
 
-    //TODO: 数式ブロック未実装
+    group("mathBlock", () {
+      test("1行の数式ブロックを使用できる", () {
+        final input = r"\[math1\]";
+        final output = [MfmMathBlock("math1")];
+        expect(parse(input), orderedEquals(output));
+      });
+
+      test("ブロックの前後にあるテキストが正しく解釈される", () {
+        final input = "abc\n\\[math1\\]\n123";
+        final output = [MfmText("abc"), MfmMathBlock("math1"), MfmText("123")];
+        expect(parse(input), orderedEquals(output));
+      });
+
+      test("行末以外に閉じタグがある場合はマッチしない", () {
+        final input = r"\[aaa\]after";
+        final output = [MfmText(r"\[aaa\]after")];
+        expect(parse(input), orderedEquals(output));
+      });
+
+      test("行頭以外に開始タグがある場合はマッチしない", () {
+        final input = r"before\[aaa\]";
+        final output = [MfmText(r"before\[aaa\]")];
+        expect(parse(input), orderedEquals(output));
+      });
+    });
 
     group("center", () {
       test("single text", () {
@@ -591,7 +615,15 @@ hoge""";
       });
     });
 
-    // not implemented math inline
+    group("mathInline", () {
+      test("basic", () {
+        final input = '\\(x = {-b \\pm \\sqrt{b^2-4ac} \\over 2a}\\)';
+        final output = [
+          MfmMathInline(formula: 'x = {-b \\pm \\sqrt{b^2-4ac} \\over 2a}')
+        ];
+        expect(parse(input), output);
+      });
+    });
 
     group("mention", () {
       test("basic", () {

@@ -68,9 +68,11 @@ class Language {
   Parser get strikeTag => _l["strikeTag"];
   Parser get strikeWave => _l["strikeWave"];
   Parser get emojiCode => _l["emojiCode"];
+  Parser get mathBlock => _l["mathBlock"];
   Parser get centerTag => _l["centerTag"];
   Parser get plainTag => _l["plainTag"];
   Parser get inlineCode => _l["inlineCode"];
+  Parser get mathInline => _l["mathInline"];
   Parser get mention => _l["mention"];
   Parser get fn => _l["fn"];
   Parser get hashTag => _l["hashtag"];
@@ -99,8 +101,8 @@ class Language {
             codeBlock,
             inlineCode,
             quote,
-            //mathBlock,
-            //mathInline,
+            mathBlock,
+            mathInline,
             strikeWave,
             fn,
             mention,
@@ -126,7 +128,7 @@ class Language {
             boldUnder,
             italicUnder,
             inlineCode,
-            //mathInline,
+            mathInline,
             strikeWave,
             fn,
             mention,
@@ -199,6 +201,29 @@ class Language {
           final code = result[5].join("");
 
           return MfmCodeBlock(code, (lang.length > 0 ? lang : null));
+        });
+      },
+      "mathBlock": () {
+        final open = str(r"\[");
+        final close = str(r"\]");
+
+        return seq([
+          newLine.option(),
+          lineBegin,
+          open,
+          newLine.option(),
+          seq([
+            notMatch(seq([newLine.option(), close])),
+            char
+          ], select: 1)
+              .many(1),
+          newLine.option(),
+          close,
+          lineEnd,
+          newLine.option()
+        ]).map((result) {
+          final formula = result[4].join("");
+          return MfmMathBlock(formula);
         });
       },
       "centerTag": () {
@@ -462,6 +487,19 @@ class Language {
               .many(1),
           mark
         ]).map((result) => MfmInlineCode(code: result[1].join("")));
+      },
+      "mathInline": () {
+        final open = str(r"\(");
+        final close = str(r"\)");
+        return seq([
+          open,
+          seq([
+            notMatch(alt([close, newLine])),
+            char
+          ], select: 1)
+              .many(1),
+          close
+        ]).map((result) => MfmMathInline(formula: result[1].join("")));
       },
       "mention": () {
         final parser = seq([

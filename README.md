@@ -44,4 +44,3 @@ print(list);
 These feature will be supported in the future.
 
 - This package is not compatible with 'toString()' and many api from the official mfm.js.
-- This package is not support math-inline and math-block.

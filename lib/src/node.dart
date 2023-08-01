@@ -72,6 +72,12 @@ class MfmCodeBlock extends MfmBlock {
       : super(type: "blockCode", props: {"code": code, "lang": lang});
 }
 
+class MfmMathBlock extends MfmBlock {
+  final String formula;
+  MfmMathBlock(this.formula)
+      : super(type: "MfmMathBlock", props: {"formula": formula});
+}
+
 /// Centering Node
 class MfmCenter extends MfmBlock {
   MfmCenter({super.children}) : super(type: "center");
@@ -137,6 +143,12 @@ class MfmInlineCode extends MfmInline {
   final String code;
   MfmInlineCode({required this.code})
       : super(type: "inlineCode", props: {"code": code});
+}
+
+class MfmMathInline extends MfmInline {
+  final String formula;
+  MfmMathInline({required this.formula})
+      : super(type: "mathInline", props: {"formula": formula});
 }
 
 /// Basically Text Node

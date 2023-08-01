@@ -1,3 +1,7 @@
+## 1.0.5
+
+- support MathInline, MathBlock
+
 ## 1.0.4
 
 - fix that MfmQuote has not node (thanks for @poppingmoon)

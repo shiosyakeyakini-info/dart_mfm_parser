@@ -50,6 +50,12 @@ void main() {
         final output = [MfmText("あ"), MfmEmojiCode("bar"), MfmText("い")];
         expect(MfmParser().parseSimple(input), orderedEquals(output));
       });
+
+      test("should not parse emojis inside <plain>", () {
+        const input = "<plain>:foo:</plain>";
+        final output = [MfmPlain(":foo:")];
+        expect(MfmParser().parseSimple(input), orderedEquals(output));
+      });
     });
 
     test("disallow other syntaxes", () {

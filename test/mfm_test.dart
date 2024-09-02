@@ -710,13 +710,31 @@ hoge""";
         expect(parse(input), orderedEquals(output));
       });
 
+      test("allow `.` in middle of username", () {
+        final input = "@a.bc";
+        final output = [MfmMention("a.bc", null, "@a.bc")];
+        expect(parse(input), orderedEquals(output));
+      });
+
       test("disallow `.` in head of username", () {
+        final input = "@.abc";
+        final output = [MfmText("@.abc")];
+        expect(parse(input), orderedEquals(output));
+      });
+
+      test("disallow `.` in tail of username", () {
+        final input = "@abc.";
+        final output = [MfmMention("abc", null, "@abc"), MfmText(".")];
+        expect(parse(input), orderedEquals(output));
+      });
+
+      test("disallow `.` in head of hostname", () {
         final input = "@abc@.aaa";
         final output = [MfmText("@abc@.aaa")];
         expect(parse(input), orderedEquals(output));
       });
 
-      test("disallow `.` in tail of username", () {
+      test("disallow `.` in tail of hostname", () {
         final input = "@abc@aaa.";
         final output = [MfmMention("abc", "aaa", "@abc@aaa"), MfmText(".")];
         expect(parse(input), orderedEquals(output));

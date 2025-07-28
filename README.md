@@ -1,6 +1,6 @@
 # mfm_parser
 
-[MFM (Misskey Flavor Markdown)](https://misskey-hub.net/en/docs/features/mfm.html) parser implementation for dart.
+[MFM (Markup language For Misskey)](https://misskey-hub.net/en/docs/for-users/features/mfm/) parser implementation for dart.
 
 This package is not **renderer** of the mfm.
 

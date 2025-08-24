@@ -345,6 +345,24 @@ hoge""";
         final output = [MfmText("abc"), MfmUnicodeEmoji("#️⃣"), MfmText("123")];
         expect(parse(input), output);
       });
+
+      test("Unicode 15.0", () {
+        final input = "🫨🩷🫷🫎🪽🪻🫚🪭🪇🪯🛜";
+        final output = [
+          MfmUnicodeEmoji("🫨"),
+          MfmUnicodeEmoji("🩷"),
+          MfmUnicodeEmoji("🫷"),
+          MfmUnicodeEmoji("🫎"),
+          MfmUnicodeEmoji("🪽"),
+          MfmUnicodeEmoji("🪻"),
+          MfmUnicodeEmoji("🫚"),
+          MfmUnicodeEmoji("🪭"),
+          MfmUnicodeEmoji("🪇"),
+          MfmUnicodeEmoji("🪯"),
+          MfmUnicodeEmoji("🛜"),
+        ];
+        expect(parse(input), output);
+      });
     });
 
     group("big", () {

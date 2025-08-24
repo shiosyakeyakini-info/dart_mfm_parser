@@ -506,7 +506,7 @@ class Language {
         final parser = seq([
           notLinkLabel,
           str("@"),
-          regexp(RegExp(r"[a-zA-Z0-9_-]+")),
+          regexp(RegExp(r"[a-zA-Z0-9_.-]+")),
           seq([
             str("@"),
             regexp(RegExp(r"[a-zA-Z0-9_.-]+")),
@@ -538,9 +538,9 @@ class Language {
               }
             }
           }
-          // remove "-" of tail of username
+          // remove [.-] of tail of username
           String modifiedName = username;
-          final regResult2 = RegExp(r"-+$").firstMatch(username);
+          final regResult2 = RegExp(r"[.-]+$").firstMatch(username);
           if (regResult2 != null) {
             if (modifiedHost == null) {
               modifiedName = username.slice(0, (-1 * regResult2[0]!.length));
@@ -549,8 +549,8 @@ class Language {
               invalidMention = true;
             }
           }
-          // disallow "-" of head of username
-          if (modifiedName.isEmpty || modifiedName[0] == '-') {
+          // disallow [.-] of head of username
+          if (modifiedName.isEmpty || RegExp(r"^[.-]").hasMatch(modifiedName)) {
             invalidMention = true;
           }
           // disallow [.-] of head of hostname

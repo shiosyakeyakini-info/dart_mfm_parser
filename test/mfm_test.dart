@@ -51,6 +51,12 @@ void main() {
         expect(MfmParser().parseSimple(input), orderedEquals(output));
       });
 
+      test("should not parse emojis inside <plain>", () {
+        const input = "<plain>:foo:</plain>";
+        final output = [MfmPlain(":foo:")];
+        expect(MfmParser().parseSimple(input), orderedEquals(output));
+      });
+
       test("ignore variation selecter", () {
         const input = "\uFE0F";
         final output = [MfmText("\uFE0F")];

@@ -113,7 +113,7 @@ class Language {
             search,
             text,
           ]),
-      "simple": () => alt([unicodeEmoji, emojiCode, text]),
+      "simple": () => alt([unicodeEmoji, emojiCode, plainTag, text]),
       "inline": () => alt([
             unicodeEmoji,
             smallTag,

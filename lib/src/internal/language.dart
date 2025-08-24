@@ -633,6 +633,15 @@ class Language {
           state.linkLabel = false;
           return result;
         });
+        final urlNoFallback = Parser(
+          handler: (input, index, state) {
+            final result = url.handler(input, index, state);
+            if (result.value is MfmURL) {
+              return result;
+            }
+            return failure();
+          },
+        );
         final closeLabel = str(']');
         return seq([
           notLinkLabel,
@@ -644,7 +653,7 @@ class Language {
               .many(1),
           closeLabel,
           str('('),
-          alt([urlAlt, url]),
+          alt([urlAlt, urlNoFallback]),
           str(')'),
         ]).map((result) {
           final silent = (result[1] == '?[');

@@ -1200,6 +1200,12 @@ hoge""";
         ];
         expect(parse(input), orderedEquals(output));
       });
+
+      test('bad url in url part', () {
+        const input = "[test](http://..)";
+        final output = [MfmText("[test](http://..)")];
+        expect(parse(input), orderedEquals(output));
+      });
     });
 
     group("fn", () {

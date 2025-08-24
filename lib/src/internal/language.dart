@@ -386,8 +386,9 @@ class Language {
         });
       },
       "unicodeEmoji": () {
-        return regexp(tweEmojiParser)
-            .map((content) => MfmUnicodeEmoji(content));
+        return regexp(tweEmojiParser).map(
+          (content) => content == "\uFE0F" ? content : MfmUnicodeEmoji(content),
+        );
       },
       "emojiCode": () {
         final side = notMatch(regexp(RegExp(r"[a-zA-Z0-9]")));

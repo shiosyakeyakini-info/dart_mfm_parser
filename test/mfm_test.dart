@@ -50,6 +50,12 @@ void main() {
         final output = [MfmText("あ"), MfmEmojiCode("bar"), MfmText("い")];
         expect(MfmParser().parseSimple(input), orderedEquals(output));
       });
+
+      test("ignore variation selecter", () {
+        const input = "\uFE0F";
+        final output = [MfmText("\uFE0F")];
+        expect(MfmParser().parseSimple(input), orderedEquals(output));
+      });
     });
 
     test("disallow other syntaxes", () {

@@ -56,6 +56,12 @@ void main() {
         final output = [MfmPlain(":foo:")];
         expect(MfmParser().parseSimple(input), orderedEquals(output));
       });
+
+      test("ignore variation selecter", () {
+        const input = "\uFE0F";
+        final output = [MfmText("\uFE0F")];
+        expect(MfmParser().parseSimple(input), orderedEquals(output));
+      });
     });
 
     test("disallow other syntaxes", () {
@@ -343,6 +349,24 @@ hoge""";
       test("keycap number sign", () {
         final input = "abc#️⃣123";
         final output = [MfmText("abc"), MfmUnicodeEmoji("#️⃣"), MfmText("123")];
+        expect(parse(input), output);
+      });
+
+      test("Unicode 15.0", () {
+        final input = "🫨🩷🫷🫎🪽🪻🫚🪭🪇🪯🛜";
+        final output = [
+          MfmUnicodeEmoji("🫨"),
+          MfmUnicodeEmoji("🩷"),
+          MfmUnicodeEmoji("🫷"),
+          MfmUnicodeEmoji("🫎"),
+          MfmUnicodeEmoji("🪽"),
+          MfmUnicodeEmoji("🪻"),
+          MfmUnicodeEmoji("🫚"),
+          MfmUnicodeEmoji("🪭"),
+          MfmUnicodeEmoji("🪇"),
+          MfmUnicodeEmoji("🪯"),
+          MfmUnicodeEmoji("🛜"),
+        ];
         expect(parse(input), output);
       });
     });
@@ -716,13 +740,31 @@ hoge""";
         expect(parse(input), orderedEquals(output));
       });
 
+      test("allow `.` in middle of username", () {
+        final input = "@a.bc";
+        final output = [MfmMention("a.bc", null, "@a.bc")];
+        expect(parse(input), orderedEquals(output));
+      });
+
       test("disallow `.` in head of username", () {
+        final input = "@.abc";
+        final output = [MfmText("@.abc")];
+        expect(parse(input), orderedEquals(output));
+      });
+
+      test("disallow `.` in tail of username", () {
+        final input = "@abc.";
+        final output = [MfmMention("abc", null, "@abc"), MfmText(".")];
+        expect(parse(input), orderedEquals(output));
+      });
+
+      test("disallow `.` in head of hostname", () {
         final input = "@abc@.aaa";
         final output = [MfmText("@abc@.aaa")];
         expect(parse(input), orderedEquals(output));
       });
 
-      test("disallow `.` in tail of username", () {
+      test("disallow `.` in tail of hostname", () {
         final input = "@abc@aaa.";
         final output = [MfmMention("abc", "aaa", "@abc@aaa"), MfmText(".")];
         expect(parse(input), orderedEquals(output));

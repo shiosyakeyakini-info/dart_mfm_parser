@@ -706,7 +706,7 @@ class Language {
         });
       },
       "urlAlt": () {
-        final open = str('<');
+        final open = alt([str('?<'), str('<')]);
         final close = str('>');
         final parser = seq([
           notLinkLabel,
@@ -724,8 +724,11 @@ class Language {
           if (!result.success) {
             return failure();
           }
-          final text = result.value!.slice(1, (result.value!.length - 1));
-          return success(result.index!, MfmURL(text, true));
+          final silent = result.value!.startsWith('?');
+          final text = silent
+              ? result.value!.slice(2, (result.value!.length - 1))
+              : result.value!.slice(1, (result.value!.length - 1));
+          return success(result.index!, MfmURL(text, true, silent: silent));
         });
       },
       "search": () {

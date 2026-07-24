@@ -197,13 +197,17 @@ class MfmLink extends MfmInline {
 /// URL Node
 ///
 /// if brackets is true, will display "<https://...>"
+///
+/// if silent is true, will not display url. (e.g. `?<https://...>`)
 class MfmURL extends MfmInline {
   final String value;
   final bool? brackets;
+  final bool silent;
 
-  MfmURL(this.value, this.brackets)
+  MfmURL(this.value, this.brackets, {this.silent = false})
       : super(type: "url", props: {
           "url": value,
           "brackets": brackets,
+          "silent": silent,
         });
 }

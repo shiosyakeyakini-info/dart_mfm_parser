@@ -1036,6 +1036,24 @@ hoge""";
         expect(parse(input), orderedEquals(output));
       });
 
+      test(
+          "match non-ascii characters contained url with angle brackets with silent",
+          () {
+        final input = "?<https://大石泉すき.example.com>";
+        final output = [
+          MfmURL("https://大石泉すき.example.com", true, silent: true)
+        ];
+        expect(parse(input), orderedEquals(output));
+      });
+
+      test(
+          "match ascii characters contained url with angle brackets with silent",
+          () {
+        final input = "?<https://example.com>";
+        final output = [MfmURL("https://example.com", true, silent: true)];
+        expect(parse(input), orderedEquals(output));
+      });
+
       test("prevent xss", () {
         final input = "javascript:foo";
         final output = [MfmText("javascript:foo")];

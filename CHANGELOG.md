@@ -1,4 +1,8 @@
 
+## Unreleased
+
+- support silent URL node with `?<url>` syntax, adding `silent` to `MfmURL` (follows misskey-dev/mfm.js#141)
+
 ## 1.0.7
 
 - support Unicode emoji additions (17.0) (commits: 8e8ecb2, b38a872, 670c1a8)

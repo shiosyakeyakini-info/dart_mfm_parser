@@ -1212,6 +1212,63 @@ hoge""";
         final output = [MfmText("[test](http://..)")];
         expect(parse(input), orderedEquals(output));
       });
+
+      test('with unclosed brackets before', () {
+        const input = "[[[foo] [bar](https://example.com)";
+        final output = [
+          MfmText("[[[foo] "),
+          MfmLink(
+            silent: false,
+            url: "https://example.com",
+            children: [MfmText("bar")],
+          ),
+        ];
+        expect(parse(input), orderedEquals(output));
+      });
+
+      test('with unclosed brackets in label', () {
+        const input = "[[[foo](https://example.com)";
+        final output = [
+          MfmLink(
+            silent: false,
+            url: "https://example.com",
+            children: [MfmText("[[foo")],
+          ),
+        ];
+        expect(parse(input), orderedEquals(output));
+      });
+
+      test('with unclosed brackets in previous line', () {
+        const input = "[[foo\n?[[bar](https://example.com)";
+        final output = [
+          MfmText("[[foo\n"),
+          MfmLink(
+            silent: true,
+            url: "https://example.com",
+            children: [MfmText("[bar")],
+          ),
+        ];
+        expect(parse(input), orderedEquals(output));
+      });
+
+      test('with unclosed brackets in bold', () {
+        const input = "**[[foo** [[bar** **[baz](https://example.com)**";
+        final output = [
+          MfmBold([MfmText("[[foo")]),
+          MfmText(" "),
+          MfmLink(
+            silent: false,
+            url: "https://example.com",
+            children: [
+              MfmText("[bar"),
+              MfmBold([MfmText(" ")]),
+              MfmText("[baz"),
+            ],
+          ),
+          MfmText("**"),
+        ];
+        expect(parse(input), orderedEquals(output));
+      });
     });
 
     group("fn", () {

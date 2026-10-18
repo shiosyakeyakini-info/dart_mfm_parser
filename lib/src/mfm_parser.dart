@@ -42,11 +42,13 @@ class FullParserOpts {
   int nestLimit;
   int depth;
   bool linkLabel;
+  Map<String, Map<int, Set<int>>>? linkLabelFailures;
   bool trace;
 
   FullParserOpts(
       {required this.nestLimit,
       required this.depth,
       required this.linkLabel,
+      this.linkLabelFailures,
       required this.trace});
 }

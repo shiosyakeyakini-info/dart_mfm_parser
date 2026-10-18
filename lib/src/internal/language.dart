@@ -2,6 +2,7 @@ import 'package:mfm_parser/src/internal/extension/string_extension.dart';
 import 'package:mfm_parser/src/internal/core/core.dart';
 import 'package:mfm_parser/src/internal/tweemoji_parser.dart';
 import 'package:mfm_parser/src/internal/utils.dart';
+import 'package:mfm_parser/src/mfm_parser.dart';
 import 'package:mfm_parser/src/node.dart';
 
 final space = regexp(RegExp(r"[\u0020\u3000\t]"));
@@ -48,6 +49,14 @@ Parser nest(Parser parser, {Parser? fallback}) {
     return result;
   });
 }
+
+Set<int> getLinkLabelFailures(String input, FullParserOpts state) {
+  state.linkLabelFailures ??= {};
+  final byDepth = state.linkLabelFailures!.putIfAbsent(input, () => {});
+  return byDepth.putIfAbsent(state.depth, () => {});
+}
+
+final language = Language();
 
 class Language {
   late final Map<String, dynamic> _l;
@@ -643,25 +652,68 @@ class Language {
           },
         );
         final closeLabel = str(']');
-        return seq([
+        final openLabel = seq([
           notLinkLabel,
           alt([str('?['), str('[')]),
-          seq([
-            notMatch(alt([closeLabel, newLine])),
-            nest(labelInline),
-          ], select: 1)
-              .many(1),
+        ], select: 1);
+        final labelItem = seq([
+          notMatch(alt([closeLabel, newLine])),
+          nest(labelInline),
+        ], select: 1);
+        final afterLabel = seq([
           closeLabel,
           str('('),
           alt([urlAlt, urlNoFallback]),
           str(')'),
-        ]).map((result) {
-          final silent = (result[1] == '?[');
-          final label = result[2];
-          final url = result[5] as MfmURL;
-          return MfmLink(
-              silent: silent, url: url.value, children: mergeText(label));
-        });
+        ], select: 2);
+        return Parser<MfmLink>(
+          handler: (input, index, state) {
+            final openResult = openLabel.handler(input, index, state);
+            if (!openResult.success) {
+              return failure();
+            }
+
+            final failedBoundaries = getLinkLabelFailures(input, state);
+            final boundaries = <int>[];
+            final label = <dynamic>[];
+            var latestIndex = openResult.index!;
+            while (!failedBoundaries.contains(latestIndex)) {
+              boundaries.add(latestIndex);
+              if (latestIndex >= input.length) {
+                break;
+              }
+              final itemResult = labelItem.handler(input, latestIndex, state);
+              if (!itemResult.success) {
+                break;
+              }
+              label.add(itemResult.value);
+              latestIndex = itemResult.index!;
+            }
+            if (label.isEmpty) {
+              return failure();
+            }
+
+            final knownFailure = failedBoundaries.contains(latestIndex);
+            final afterResult = knownFailure
+                ? failure()
+                : afterLabel.handler(input, latestIndex, state);
+            if (!afterResult.success || afterResult.value is! MfmURL) {
+              for (final boundary in boundaries) {
+                failedBoundaries.add(boundary);
+              }
+              return failure();
+            }
+            final silent = openResult.value == '?[';
+            return success(
+              index,
+              MfmLink(
+                silent: silent,
+                url: (afterResult.value as MfmURL).value,
+                children: mergeText(label),
+              ),
+            );
+          },
+        );
       },
       "url": () {
         final urlChar = regexp(RegExp(r"""[.,a-zA-Z0-9_/:%#@$&?!~=+-]"""));

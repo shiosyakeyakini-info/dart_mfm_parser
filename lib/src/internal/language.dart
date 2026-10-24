@@ -32,8 +32,27 @@ Parser notLinkLabel = Parser(handler: (_, index, state) {
   return (!state.linkLabel) ? success(index, null) : failure();
 });
 
+bool alphaAndNumBefore(String input, int index) {
+  return index > 0 && RegExp("[a-zA-Z0-9]").hasMatch(input[index - 1]);
+}
+
+int trailingLength(String text, String chars) {
+  var length = 0;
+  while (
+      length < text.length && chars.contains(text[text.length - 1 - length])) {
+    length += 1;
+  }
+  return length;
+}
+
 Parser nestable = Parser(handler: (_, index, state) {
-  return (state.depth < state.nestLimit) ? success(index, null) : failure();
+  if (state.nestBudget != null) {
+    if (state.nestBudget! <= 0) {
+      return failure();
+    }
+    state.nestBudget = state.nestBudget! - 1;
+  }
+  return state.depth < state.nestLimit ? success(index, null) : failure();
 });
 
 Parser nest(Parser parser, {Parser? fallback}) {
@@ -86,56 +105,61 @@ class Language {
     _l = createLanguage({
       "full": () => alt([
             unicodeEmoji,
-            centerTag,
-            smallTag,
-            plainTag,
-            boldTag,
-            italicTag,
-            strikeTag,
-            urlAlt,
-            big,
-            boldAsta,
-            italicAsta,
-            boldUnder,
-            italicUnder,
-            codeBlock,
-            inlineCode,
-            quote,
-            mathBlock,
-            mathInline,
-            strikeWave,
-            fn,
-            mention,
-            hashTag,
-            emojiCode,
-            link,
-            url,
+            first('\r\n<', centerTag),
+            first('<', smallTag),
+            first('<', plainTag),
+            first('<', boldTag),
+            first('<', italicTag),
+            first('<', strikeTag),
+            first('<', urlAlt),
+            first('*', big),
+            first('*', boldAsta),
+            first('*', italicAsta),
+            first('_', boldUnder),
+            first('_', italicUnder),
+            first('\r\n`', codeBlock),
+            first('`', inlineCode),
+            first('\r\n>', quote),
+            first('\r\n\\', mathBlock),
+            first(r'\', mathInline),
+            first('~', strikeWave),
+            first(r'$', fn),
+            first('@', mention),
+            first('#', hashTag),
+            first(':', emojiCode),
+            first('?[', link),
+            first('h', url),
             search,
             text,
           ]),
-      "simple": () => alt([unicodeEmoji, emojiCode, plainTag, text]),
+      "simple": () => alt([
+            unicodeEmoji,
+            first(':', emojiCode),
+            first('<', plainTag),
+            text,
+          ]),
       "inline": () => alt([
             unicodeEmoji,
-            smallTag,
-            plainTag,
-            boldTag,
-            italicTag,
-            strikeTag,
-            urlAlt,
-            big,
-            boldAsta,
-            italicAsta,
-            boldUnder,
-            italicUnder,
-            inlineCode,
-            mathInline,
-            strikeWave,
-            fn,
-            mention,
-            hashTag,
-            emojiCode,
-            link,
-            url,
+            first('<', smallTag),
+            first('<', plainTag),
+            first('<', boldTag),
+            first('<', italicTag),
+            first('<', strikeTag),
+            first('<', urlAlt),
+            first('*', big),
+            first('*', boldAsta),
+            first('*', italicAsta),
+            first('_', boldUnder),
+            first('_', italicUnder),
+            first('`', inlineCode),
+            first(r'\', mathInline),
+            first('~', strikeWave),
+            first(r'$', fn),
+            first('@', mention),
+            first('#', hashTag),
+            first(':', emojiCode),
+            first('?[', link),
+            first('h', url),
             text,
           ]),
       "quote": () {
@@ -187,18 +211,14 @@ class Language {
           mark,
           seq([notMatch(newLine), char], select: 1).many(0),
           newLine,
-          seq([
-            notMatch(seq([newLine, mark, lineEnd])),
-            char
-          ], select: 1)
-              .many(1),
+          until(seq([newLine, mark, lineEnd]), 1),
           newLine,
           mark,
           lineEnd,
           newLine.option()
         ]).map((result) {
           final lang = result[3].join("").trim();
-          final code = result[5].join("");
+          final code = result[5];
 
           return MfmCodeBlock(code, (lang.length > 0 ? lang : null));
         });
@@ -212,17 +232,13 @@ class Language {
           lineBegin,
           open,
           newLine.option(),
-          seq([
-            notMatch(seq([newLine.option(), close])),
-            char
-          ], select: 1)
-              .many(1),
+          until(seq([newLine.option(), close]), 1),
           newLine.option(),
           close,
           lineEnd,
           newLine.option()
         ]).map((result) {
-          final formula = result[4].join("");
+          final formula = result[4];
           return MfmMathBlock(formula);
         });
       },
@@ -235,17 +251,21 @@ class Language {
           lineBegin,
           open,
           newLine.option(),
-          seq([
-            notMatch(seq([newLine.option(), close])),
-            nest(inline)
-          ], select: 1)
-              .many(1),
-          newLine.option(),
-          close,
-          lineEnd,
-          newLine.option()
+          manyThen(
+            nest(inline),
+            seq([newLine.option(), close]),
+            seq([
+              newLine.option(),
+              close,
+              lineEnd,
+              newLine.option(),
+            ]),
+            1,
+          ),
         ]).map((result) {
-          return MfmCenter(children: mergeText(result[4]).cast<MfmInline>());
+          return MfmCenter(
+            children: mergeText(result[4].items).cast<MfmInline>(),
+          );
         });
       },
       "big": () {
@@ -328,8 +348,7 @@ class Language {
           if (!result.success) {
             return failure();
           }
-          final beforeStr = input.slice(0, index);
-          if (RegExp(r"[a-zA-Z0-9]$").hasMatch(beforeStr)) {
+          if (alphaAndNumBefore(input, index)) {
             return failure();
           }
           return success(result.index!,
@@ -349,8 +368,7 @@ class Language {
           if (!result.success) {
             return failure();
           }
-          final beforeStr = input.slice(0, index);
-          if (RegExp(r"[a-zA-Z0-9]$").hasMatch(beforeStr)) {
+          if (alphaAndNumBefore(input, index)) {
             return failure();
           }
           return success(result.index!,
@@ -409,12 +427,7 @@ class Language {
         return seq([
           open,
           newLine.option(),
-          seq([
-            notMatch(seq([newLine.option(), close])),
-            char
-          ], select: 1)
-              .many(1)
-              .text(),
+          until(seq([newLine.option(), close]), 1),
           newLine.option(),
           close
         ], select: 2)
@@ -481,26 +494,18 @@ class Language {
         final mark = str("`");
         return seq([
           mark,
-          seq([
-            notMatch(alt([mark, str("´"), newLine])),
-            char,
-          ], select: 1)
-              .many(1),
+          until(alt([mark, str("´"), newLine]), 1),
           mark
-        ]).map((result) => MfmInlineCode(code: result[1].join("")));
+        ]).map((result) => MfmInlineCode(code: result[1]));
       },
       "mathInline": () {
         final open = str(r"\(");
         final close = str(r"\)");
         return seq([
           open,
-          seq([
-            notMatch(alt([close, newLine])),
-            char
-          ], select: 1)
-              .many(1),
+          until(alt([close, newLine]), 1),
           close
-        ]).map((result) => MfmMathInline(formula: result[1].join("")));
+        ]).map((result) => MfmMathInline(formula: result[1]));
       },
       "mention": () {
         final parser = seq([
@@ -518,9 +523,9 @@ class Language {
           Result result = parser.handler(input, index, state);
           if (!result.success) return failure();
 
-          final beforeStr = input.slice(0, index);
-          if (RegExp(r"[a-zA-Z0-9]$").hasMatch(beforeStr)) return failure();
-
+          if (alphaAndNumBefore(input, index)) {
+            return failure();
+          }
           var invalidMention = false;
           final resultIndex = result.index!;
           final username = result.value[2] as String;
@@ -528,9 +533,9 @@ class Language {
 
           var modifiedHost = hostname;
           if (hostname != null) {
-            final regResult = RegExp(r"[.-]+$").firstMatch(hostname);
-            if (regResult != null) {
-              modifiedHost = hostname.slice(0, (-1 * regResult[0]!.length));
+            final trailing = trailingLength(hostname, ".-");
+            if (trailing > 0) {
+              modifiedHost = hostname.slice(0, -trailing);
               if (modifiedHost.isEmpty) {
                 // disallow invalid char only hostname
                 invalidMention = true;
@@ -540,10 +545,10 @@ class Language {
           }
           // remove [.-] of tail of username
           String modifiedName = username;
-          final regResult2 = RegExp(r"[.-]+$").firstMatch(username);
-          if (regResult2 != null) {
+          final trailing = trailingLength(username, ".-");
+          if (trailing > 0) {
             if (modifiedHost == null) {
-              modifiedName = username.slice(0, (-1 * regResult2[0]!.length));
+              modifiedName = username.slice(0, -trailing);
             } else {
               // cannnot to remove tail of username if exist hostname
               invalidMention = true;
@@ -613,8 +618,7 @@ class Language {
             return failure();
           }
           // check before
-          final beforeStr = input.slice(0, index);
-          if (RegExp(r"[a-zA-Z0-9]$").hasMatch(beforeStr)) {
+          if (alphaAndNumBefore(input, index)) {
             return failure();
           }
           final resultIndex = result.index!;
@@ -646,21 +650,26 @@ class Language {
         return seq([
           notLinkLabel,
           alt([str('?['), str('[')]),
-          seq([
-            notMatch(alt([closeLabel, newLine])),
+          manyThen(
             nest(labelInline),
-          ], select: 1)
-              .many(1),
-          closeLabel,
-          str('('),
-          alt([urlAlt, urlNoFallback]),
-          str(')'),
+            alt([closeLabel, newLine]),
+            seq([
+              closeLabel,
+              str('('),
+              alt([urlAlt, urlNoFallback]),
+              str(')'),
+            ], select: 2),
+            1,
+          ),
         ]).map((result) {
           final silent = (result[1] == '?[');
-          final label = result[2];
-          final url = result[5] as MfmURL;
+          final manyThenItems = result[2] as ManyThenItems;
+          final url = manyThenItems.afterValue as MfmURL;
           return MfmLink(
-              silent: silent, url: url.value, children: mergeText(label));
+            silent: silent,
+            url: url.value,
+            children: mergeText(manyThenItems.items),
+          );
         });
       },
       "url": () {
@@ -694,10 +703,10 @@ class Language {
           final schema = result.value[1] as String;
           var content = result.value[2] as String;
           // remove the ".," at the right end
-          var regexpResult = RegExp(r"[.,]+$").firstMatch(content);
-          if (regexpResult != null) {
-            modifiedIndex -= regexpResult.group(0)!.length;
-            content = content.slice(0, (-1 * regexpResult.group(0)!.length));
+          final trailing = trailingLength(content, ".,");
+          if (trailing > 0) {
+            modifiedIndex -= trailing;
+            content = content.slice(0, -trailing);
             if (content.isEmpty) {
               return success(resultIndex, input.slice(index, resultIndex));
             }
@@ -712,11 +721,7 @@ class Language {
           notLinkLabel,
           open,
           regexp(RegExp(r"https?://")),
-          seq([
-            notMatch(alt([close, space])),
-            char
-          ], select: 1)
-              .many(1),
+          until(alt([close, space]), 1),
           close,
         ]).text();
         return Parser(handler: (input, index, state) {
@@ -737,20 +742,19 @@ class Language {
         return seq([
           newLine.option(),
           lineBegin,
-          seq([
-            notMatch(alt([
+          until(
+            alt([
               newLine,
               seq([space, button, lineEnd])
-            ])),
-            char
-          ], select: 1)
-              .many(1),
+            ]),
+            1,
+          ),
           space,
           button,
           lineEnd,
           newLine.option(),
         ]).map((result) {
-          final query = result[2].join('');
+          final query = result[2];
           return MfmSearch(query, "$query${result[3]}${result[4]}");
         });
       }

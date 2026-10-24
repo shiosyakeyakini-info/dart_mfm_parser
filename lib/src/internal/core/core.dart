@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:mfm_parser/src/mfm_parser.dart';
 
 class Success<T> extends Result<T> {
@@ -17,6 +19,20 @@ abstract class Result<T> {
   const Result({required this.success, this.value, this.index});
 }
 
+class Span {
+  final int start;
+  final int end;
+
+  const Span(this.start, this.end);
+}
+
+class ManyThenItems<T, U> {
+  final List<T> items;
+  final U afterValue;
+
+  const ManyThenItems(this.items, this.afterValue);
+}
+
 typedef ParserHandler<T> = Result<T> Function(
     String input, int index, FullParserOpts state);
 
@@ -27,25 +43,9 @@ Failure<T> failure<T>() => Failure<T>();
 class Parser<T> {
   String? name;
   late ParserHandler<T> handler;
+  String? firstChars;
 
-  Parser({required ParserHandler<T> handler, this.name}) {
-    this.handler = (input, index, state) {
-      if (state.trace && name != null) {
-        final pos = "$index";
-        print("${pos.padRight(6)}enter $name");
-        final result = handler(input, index, state);
-        if (result.success) {
-          final pos = "$index:${result.index}";
-          print("${pos.padRight(6)}match $name");
-        } else {
-          final pos = "$index";
-          print("${pos.padRight(6)}fail $name");
-        }
-        return result;
-      }
-      return handler(input, index, state);
-    };
-  }
+  Parser({required this.handler, this.name});
 
   Parser<U> map<U>(U Function(T value) fn) {
     return Parser<U>(handler: (input, index, state) {
@@ -159,16 +159,45 @@ Parser seq(List<Parser> parsers, {int? select}) {
 }
 
 Parser alt(List<Parser> parsers) {
+  final candidatesByChar =
+      parsers.any((p) => p.firstChars != null) ? <int, List<Parser>>{} : null;
   return Parser(handler: (input, index, state) {
-    Result result;
-    for (var i = 0; i < parsers.length; i++) {
-      result = parsers[i].handler(input, index, state);
+    List<Parser> candidates = parsers;
+    if (candidatesByChar != null) {
+      final code =
+          index < input.length ? min(input.codeUnitAt(index), 0x80) : -1;
+      var cached = candidatesByChar[code];
+      if (cached == null) {
+        cached = parsers
+            .where((parser) =>
+                parser.firstChars == null ||
+                (code >= 0 &&
+                    parser.firstChars!.contains(String.fromCharCode(code))))
+            .toList();
+        candidatesByChar[code] = cached;
+      }
+      candidates = cached;
+    }
+    for (var i = 0; i < candidates.length; i++) {
+      final parser = candidates[i];
+      final result = parser.handler(input, index, state);
       if (result.success) {
         return result;
       }
     }
     return failure();
   });
+}
+
+Parser<T> first<T>(String chars, Parser<T> parser) {
+  final guarded = Parser<T>(handler: (input, index, state) {
+    if (index >= input.length || !chars.contains(input[index])) {
+      return failure();
+    }
+    return parser.handler(input, index, state);
+  });
+  guarded.firstChars = chars;
+  return guarded;
 }
 
 Parser<T> succeeded<T>(T value) {
@@ -182,6 +211,81 @@ Parser notMatch(Parser parser) {
     final result = parser.handler(input, index, state);
     return !result.success ? success(index, null) : failure();
   });
+}
+
+int stateKey(FullParserOpts state) {
+  return state.depth * 2 + (state.linkLabel ? 1 : 0);
+}
+
+Parser<String> until(Parser terminator, int min) {
+  late final Parser<String> parser;
+  parser = Parser<String>(handler: (input, index, state) {
+    state.untilSpans ??= {};
+    final spans = state.untilSpans!.putIfAbsent(parser, () => {});
+    final span = spans[input];
+    int end;
+    if (span != null && span.start <= index && index <= span.end) {
+      end = span.end;
+    } else {
+      end = index;
+      while (end < input.length &&
+          !terminator.handler(input, end, state).success) {
+        end++;
+      }
+      spans[input] = Span(index, end);
+    }
+    if (end - index < min) {
+      return failure();
+    }
+    return success(end, input.substring(index, end));
+  });
+  return parser;
+}
+
+Parser<ManyThenItems<T, U>> manyThen<T, U>(
+  Parser<T> item,
+  Parser stop,
+  Parser<U> after,
+  int min,
+) {
+  final element = seq([notMatch(stop), item], select: 1);
+  late final Parser<ManyThenItems<T, U>> parser;
+  parser = Parser(handler: (input, index, state) {
+    state.manyThenFailures ??= {};
+    final byInput = state.manyThenFailures!.putIfAbsent(parser, () => {});
+    final byState = byInput.putIfAbsent(input, () => {});
+    final failures = byState.putIfAbsent(stateKey(state), () => {});
+    final boundaries = <int>[];
+    final items = <T>[];
+    var latestIndex = index;
+    while (!failures.contains(latestIndex)) {
+      boundaries.add(latestIndex);
+      if (latestIndex >= input.length) {
+        break;
+      }
+      final result = element.handler(input, latestIndex, state);
+      if (!result.success) {
+        break;
+      }
+      items.add(result.value as T);
+      latestIndex = result.index!;
+    }
+    if (items.length < min) {
+      return failure();
+    }
+    final afterResult = failures.contains(latestIndex)
+        ? failure<U>()
+        : after.handler(input, latestIndex, state);
+    if (!afterResult.success) {
+      failures.addAll(boundaries);
+      return failure();
+    }
+    return success(
+      afterResult.index!,
+      ManyThenItems(items, afterResult.value as U),
+    );
+  });
+  return parser;
 }
 
 final Parser cr = str("\r");
@@ -231,14 +335,39 @@ Parser lazy<T>(Parser<T> Function() fn) {
   return parser;
 }
 
-Map<String, Parser> createLanguage<T>(Map<String, Parser Function()> syntaxes) {
+Parser<T> traced<T>(Parser<T> parser, String name) {
+  return Parser(
+    handler: (input, index, state) {
+      if (!state.trace) {
+        return parser.handler(input, index, state);
+      }
+      final pos = "$index";
+      print("${pos.padRight(6)}enter $name");
+      final result = parser.handler(input, index, state);
+      if (result.success) {
+        final pos = "$index:${result.index}";
+        print("${pos.padRight(6)}match $name");
+      } else {
+        final pos = "$index";
+        print("${pos.padRight(6)}fail $name");
+      }
+      return result;
+    },
+    name: name,
+  );
+}
+
+Map<String, Parser> createLanguage<T>(
+    Map<String, Parser? Function()> syntaxes) {
   final Map<String, Parser> rules = {};
 
   for (final entry in syntaxes.entries) {
     rules[entry.key] = lazy(() {
-      final parser = syntaxes[entry.key]!();
-      parser.name = entry.key;
-      return parser;
+      final Parser? parser = syntaxes[entry.key]!();
+      if (parser == null) {
+        throw Exception('syntax must return a parser.');
+      }
+      return traced(parser, entry.key);
     });
   }
   return rules;

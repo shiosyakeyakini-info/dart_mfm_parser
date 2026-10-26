@@ -15,6 +15,7 @@ class MfmParser {
         0,
         FullParserOpts(
             nestLimit: nestLimit ?? 20,
+            nestBudget: input.length * 20 + 1000,
             depth: 0,
             linkLabel: false,
             trace: false)) as Success;
@@ -40,13 +41,19 @@ class MfmParser {
 
 class FullParserOpts {
   int nestLimit;
+  int? nestBudget;
   int depth;
   bool linkLabel;
   bool trace;
+  Map<Parser, Map<String, Span>>? untilSpans;
+  Map<Parser, Map<String, Map<int, Set<int>>>>? manyThenFailures;
 
   FullParserOpts(
       {required this.nestLimit,
+      this.nestBudget,
       required this.depth,
       required this.linkLabel,
-      required this.trace});
+      required this.trace,
+      this.untilSpans,
+      this.manyThenFailures});
 }

@@ -728,6 +728,15 @@ hoge""";
         expect(parse(input), orderedEquals(output));
       });
 
+      test("allow `.` in username", () {
+        final input = "@bsky.brid.gy@bsky.brid.gy";
+        final output = [
+          MfmMention(
+              "bsky.brid.gy", "bsky.brid.gy", "@bsky.brid.gy@bsky.brid.gy")
+        ];
+        expect(parse(input), orderedEquals(output));
+      });
+
       test("disallow `-` in head of username", () {
         final input = "@-abc";
         final output = [MfmText("@-abc")];
@@ -969,6 +978,21 @@ hoge""";
         final output = [
           MfmURL("https://misskey.io/@ai", false),
           MfmText("...")
+        ];
+        expect(parse(input), orderedEquals(output));
+      });
+
+      test("with comma", () {
+        final input = "https://example.com/foo?bar=a,b";
+        final output = [MfmURL("https://example.com/foo?bar=a,b", false)];
+        expect(parse(input), orderedEquals(output));
+      });
+
+      test("ignore trailing comma", () {
+        final input = "https://example.com/foo, bar";
+        final output = [
+          MfmURL("https://example.com/foo", false),
+          MfmText(", bar")
         ];
         expect(parse(input), orderedEquals(output));
       });
@@ -1428,9 +1452,9 @@ hoge""";
           expect(parse(input), orderedEquals(output));
         });
 
-        test("outside ()", () {
-          final input = "(#abc)";
-          final output = [MfmText("("), MfmHashTag("abc"), MfmText(")")];
+        test("outside （）", () {
+          final input = "（#abc）";
+          final output = [MfmText("（"), MfmHashTag("abc"), MfmText("）")];
           expect(parse(input), orderedEquals(output));
         });
       });
